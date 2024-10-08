@@ -216,3 +216,7 @@ include_directories(
 add_library(robot_gui src/robot_gui.cpp)
 add_executable(robot_gui_node src/robot_gui_node.cpp)
 target_link_libraries(robot_gui_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} robot_gui)
+
+add_library(distance_tracker src/distance_tracker_service.cpp)
+add_executable(distance_tracker_service_node src/distance_tracker_service_node.cpp)
+target_link_libraries(distance_tracker_service_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} distance_tracker)

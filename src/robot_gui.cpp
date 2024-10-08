@@ -3,12 +3,15 @@
 #include "nav_msgs/Odometry.h"
 #include "robotinfo_msgs/RobotInfo10Fields.h"
 #include "ros/node_handle.h"
+#include "std_srvs/Trigger.h"
 
 RobotGUI::RobotGUI(ros::NodeHandle *node_handle) {
   this->nh_ = node_handle;
   info_topic_name = "robot_info";
   vel_topic_name = "cmd_vel";
   odom_topic_name = "odom";
+  get_distance_service_name = "get_distance";
+  reset_distance_service_name = "reset_distance";
   sub_ = nh_->subscribe<robotinfo_msgs::RobotInfo10Fields>(
       info_topic_name, 20, &RobotGUI::msgCallback, this);
   velocity_sub_ = nh_->subscribe<geometry_msgs::Twist>(
@@ -16,6 +19,11 @@ RobotGUI::RobotGUI(ros::NodeHandle *node_handle) {
   odom_sub_ = nh_->subscribe<nav_msgs::Odometry>(
       odom_topic_name, 10, &RobotGUI::odomMsgCallback, this);
   pub_ = nh_->advertise<geometry_msgs::Twist>(vel_topic_name, 100);
+  get_distance_service_client =
+      nh_->serviceClient<std_srvs::Trigger>(get_distance_service_name);
+  distance_ = "0.0";
+  reset_distance_service_client =
+      nh_->serviceClient<std_srvs::Trigger>(reset_distance_service_name);
   ROS_INFO("RobotGUI Node created.");
 }
 
@@ -51,7 +59,7 @@ void RobotGUI::robot_info_display(cv::Mat &frame) {
       robotinfo_message.data_field_09, robotinfo_message.data_field_10};
 
   cvui::window(frame, win_posx, win_posy, win_width, win_height,
-               "Topic: " + info_topic_name);
+               "General Info Area: " + info_topic_name);
 
   for (int i = 0; i < 10; i++) {
     cvui::printf(frame, posx, posy + 20 * i, font_s, white,
@@ -147,6 +155,44 @@ void RobotGUI::robot_position_odom(cv::Mat &frame) {
                0xffffff, "%.2f", odom_message.pose.pose.position.z);
 }
 
+void RobotGUI::distance_travelled_service(cv::Mat &frame) {
+  // params
+  int posx = 40, posy = 525;
+  float font_size_text = 0.4;
+  cvui::text(frame, posx, posy, "Distance Travelled by Robot", font_size_text);
+
+  int button_posx = posx, button_posy = posy + 15;
+  int width = 100, height = 80;
+  if (cvui::button(frame, button_posx, button_posy, width, height,
+                   "Get Distance")) {
+    if (get_distance_service_client.call(get_distance_service_req)) {
+      distance_ = get_distance_service_req.response.message;
+      ROS_INFO("Client: Distance Service Call Success.");
+    } else {
+      ROS_WARN("Client: Distance Service Call Failed.");
+    }
+  }
+
+  int win_posx = posx + width + 10, win_posy = button_posy;
+  int win_width = 210, win_height = 80;
+  float font_size_pos = 0.7;
+
+  cvui::window(frame, win_posx, win_posy, win_width, win_height,
+               "Distance in meters");
+  cvui::printf(frame, win_posx + 75, win_posy + 45, font_size_pos, 0xffffff,
+               "%s", distance_.c_str());
+
+  if (cvui::button(frame, button_posx, button_posy + 90, 320, 60,
+                   "Reset Distance")) {
+    if (reset_distance_service_client.call(reset_distance_service_req)) {
+      distance_ = reset_distance_service_req.response.message;
+      ROS_INFO("Client: Reset Distance Service Call Success.");
+    } else {
+      ROS_WARN("Client: Reset Distance Service Call Failed.");
+    }
+  }
+}
+
 void RobotGUI::run() {
   // canvas for drawing the GUI height x width
   cv::Mat frame = cv::Mat(700, 400, CV_8UC3);
@@ -164,6 +210,7 @@ void RobotGUI::run() {
     teleop_buttons(frame);
     current_velocity(frame);
     robot_position_odom(frame);
+    distance_travelled_service(frame);
 
     cvui::update();
     cv::imshow(WINDOW_NAME, frame);
