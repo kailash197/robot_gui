@@ -8,8 +8,12 @@ project(robot_gui)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  cv_bridge
+  image_transport
   geometry_msgs
   nav_msgs
+  sensor_msgs
+  std_msgs
   robotinfo_msgs
   roscpp
   std_srvs
@@ -17,7 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package(OpenCV 4 REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -118,8 +122,9 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -206,3 +211,8 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+
+add_library(robot_gui src/robot_gui.cpp)
+add_executable(robot_gui_node src/robot_gui_node.cpp)
+target_link_libraries(robot_gui_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} robot_gui)
