@@ -1,5 +1,6 @@
 #include "../include/robot_gui/robot_gui.h"
 #include "geometry_msgs/Twist.h"
+#include "nav_msgs/Odometry.h"
 #include "robotinfo_msgs/RobotInfo10Fields.h"
 #include "ros/node_handle.h"
 
@@ -7,10 +8,13 @@ RobotGUI::RobotGUI(ros::NodeHandle *node_handle) {
   this->nh_ = node_handle;
   info_topic_name = "robot_info";
   vel_topic_name = "cmd_vel";
+  odom_topic_name = "odom";
   sub_ = nh_->subscribe<robotinfo_msgs::RobotInfo10Fields>(
       info_topic_name, 20, &RobotGUI::msgCallback, this);
   velocity_sub_ = nh_->subscribe<geometry_msgs::Twist>(
       vel_topic_name, 20, &RobotGUI::velMsgCallback, this);
+  odom_sub_ = nh_->subscribe<nav_msgs::Odometry>(
+      odom_topic_name, 10, &RobotGUI::odomMsgCallback, this);
   pub_ = nh_->advertise<geometry_msgs::Twist>(vel_topic_name, 100);
   ROS_INFO("RobotGUI Node created.");
 }
@@ -24,6 +28,11 @@ void RobotGUI::msgCallback(
     const robotinfo_msgs::RobotInfo10Fields::ConstPtr &msg) {
   robotinfo_message = *msg;
   ROS_DEBUG("Robot Info Message Received.");
+}
+
+void RobotGUI::odomMsgCallback(const nav_msgs::Odometry::ConstPtr &odom_msg) {
+  odom_message = *odom_msg;
+  ROS_DEBUG("Odometry Message Received.");
 }
 
 void RobotGUI::robot_info_display(cv::Mat &frame) {
@@ -116,6 +125,28 @@ void RobotGUI::current_velocity(cv::Mat &frame) {
                0xff0000, "%.2f rad/s", twist_message.angular.z);
 }
 
+void RobotGUI::robot_position_odom(cv::Mat &frame) {
+  // params:
+  int posx = 40, posy = 405;
+  float font_size_text = 0.4, font_size_pos = 0.85;
+  int win_posx_X = posx;
+  int win_posy_X = posy + 10;
+  int width = 100, height = 100;
+
+  cvui::text(frame, posx, posy, "Estimated robot position based on odometer",
+             font_size_text);
+
+  cvui::window(frame, win_posx_X, win_posy_X, width, height, "X");
+  cvui::printf(frame, win_posx_X + 10, win_posy_X + 45, font_size_pos, 0xffffff,
+               "%.2f", odom_message.pose.pose.position.x);
+  cvui::window(frame, win_posx_X + 110, win_posy_X, width, height, "Y");
+  cvui::printf(frame, win_posx_X + 120, win_posy_X + 45, font_size_pos,
+               0xffffff, "%.2f", odom_message.pose.pose.position.y);
+  cvui::window(frame, win_posx_X + 220, win_posy_X, width, height, "Z");
+  cvui::printf(frame, win_posx_X + 230, win_posy_X + 45, font_size_pos,
+               0xffffff, "%.2f", odom_message.pose.pose.position.z);
+}
+
 void RobotGUI::run() {
   // canvas for drawing the GUI height x width
   cv::Mat frame = cv::Mat(700, 400, CV_8UC3);
@@ -132,6 +163,7 @@ void RobotGUI::run() {
     robot_info_display(frame);
     teleop_buttons(frame);
     current_velocity(frame);
+    robot_position_odom(frame);
 
     cvui::update();
     cv::imshow(WINDOW_NAME, frame);
