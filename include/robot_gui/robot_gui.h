@@ -13,7 +13,7 @@ public:
   void run();
   void robot_info_display(cv::Mat &frame);
   void teleop_buttons(cv::Mat &frame);
-  void current_velocity();
+  void current_velocity(cv::Mat &frame);
   void robot_position_odom();
   void distance_travelled_service();
 

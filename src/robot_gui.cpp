@@ -98,12 +98,30 @@ void RobotGUI::teleop_buttons(cv::Mat &frame) {
   pub_.publish(twist_message);
 }
 
+void RobotGUI::current_velocity(cv::Mat &frame) {
+  // params:
+  int win_posx_linear = 40, win_posy_linear = 350;
+  int win_posx_angular = 210, win_posy_angular = 350;
+  int width = 150, height = 40;
+
+  // Create window at (220, 20) with size 250x80 (width x height) and title
+  cvui::window(frame, win_posx_linear, win_posy_linear, width, height,
+               "Linear Velocity");
+  cvui::printf(frame, win_posx_linear + 75, win_posy_linear + 25, 0.4, 0xff0000,
+               "%.2f m/s", twist_message.linear.x);
+
+  cvui::window(frame, win_posx_angular, win_posy_angular, width, height,
+               "Angular Velocity");
+  cvui::printf(frame, win_posx_angular + 67, win_posy_angular + 25, 0.4,
+               0xff0000, "%.2f rad/s", twist_message.angular.z);
+}
+
 void RobotGUI::run() {
   // canvas for drawing the GUI height x width
   cv::Mat frame = cv::Mat(700, 400, CV_8UC3);
 
   // Init a OpenCV window and tell cvui to use it.
-  cv::namedWindow(WINDOW_NAME, cv::WINDOW_NORMAL);
+  cv::namedWindow(WINDOW_NAME); //, cv::WINDOW_NORMAL);
   cvui::init(WINDOW_NAME);
 
   while (ros::ok()) {
@@ -113,6 +131,7 @@ void RobotGUI::run() {
     // general info display
     robot_info_display(frame);
     teleop_buttons(frame);
+    current_velocity(frame);
 
     cvui::update();
     cv::imshow(WINDOW_NAME, frame);
